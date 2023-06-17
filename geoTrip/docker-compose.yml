@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  birdappbase:
+    image: mongo:latest
+    container_name: "geotripbase"
+    ports:
+      - 27017:27017
+#  birdappservice:
+#    image: birdapp:latest
+#    container_name: "birdappservice"
+#    ports:
+#      - 8080:8080
+#    links:
+#      - birdappbase
+
