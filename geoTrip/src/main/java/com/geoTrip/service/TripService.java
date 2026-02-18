@@ -1,10 +1,13 @@
 package com.geoTrip.service;
 
+import com.geoTrip.exception.UserNotFoundException;
 import com.geoTrip.model.*;
 import com.geoTrip.repository.PointRepository;
 import com.geoTrip.repository.TripRepository;
 import com.geoTrip.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +33,8 @@ public class TripService {
         tripRepository.delete(trip);
     }
 
-    public TripResponse createTrip(User user, TripRequest tripRequest) {
+    public TripResponse createTrip(Jwt jwt, TripRequest tripRequest) throws UserNotFoundException {
+        User user = userRepository.findById(UUID.fromString(jwt.getClaim(JwtClaimNames.SUB))).orElseThrow(() -> new UserNotFoundException("User does not exists"));
         Trip trip = Trip.builder()
                 .id(UUID.randomUUID())
                 .name(tripRequest.name())
@@ -47,7 +51,8 @@ public class TripService {
         userRepository.save(user);
         var savedTrip = tripRepository.save(trip);
 
-        String distance = String.valueOf(calculateDistance(trip)).substring(0, 4);
+        //String distance = String.valueOf(calculateDistance(trip)).substring(0, 4);
+        String distance = "0.0";
 
         return new TripResponse(savedTrip.getId(), savedTrip.getName(), distance, savedTrip.getPointList());
     }
@@ -65,6 +70,23 @@ public class TripService {
         String distance = String.valueOf(calculateDistance(trip)).substring(0, 4);
 
         return new TripResponse(trip.getId(), trip.getName(), distance, points);
+    }
+
+    public List<TripResponse> getUserTrips(Jwt jwt) throws UserNotFoundException {
+        User user = userRepository.findById(jwt.getClaim(JwtClaimNames.SUB)).orElseThrow(() -> new UserNotFoundException("User does not exists"));
+        return mapToTripResponseList(user.getTrips());
+    }
+
+    private List<TripResponse> mapToTripResponseList(List<Trip> tripList) {
+        return tripList
+                .stream()
+                .map(trip -> new TripResponse(
+                        trip.getId(),
+                        trip.getName(),
+                        String.valueOf(calculateDistance(trip)).substring(0, 4),
+                        trip.getPointList()
+                ))
+                .toList();
     }
 
     //TODO to refactor
@@ -105,7 +127,7 @@ public class TripService {
         return new TripResponse(trip.getId(), trip.getName(), distance, trip.getPointList());
     }
 
-    public double calculateDistance(Trip trip) {
+    private double calculateDistance(Trip trip) {
         List<Point> points = trip.getPointList();
 
         double sum = 0;
