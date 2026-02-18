@@ -5,17 +5,13 @@ import com.geoTrip.model.*;
 import com.geoTrip.repository.PointRepository;
 import com.geoTrip.repository.TripRepository;
 import com.geoTrip.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -27,10 +23,12 @@ public class TripService {
 
     private static final double EARTH_RADIUS = 6371;
 
-    @Transactional
-    public void deleteTrip(Trip trip) {
+    public TripResponse deleteTrip(UUID tripId) {
+        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
         pointRepository.deleteByTrip(trip);
         tripRepository.delete(trip);
+
+        return mapToTripResponse(trip);
     }
 
     public TripResponse createTrip(Jwt jwt, TripRequest tripRequest) throws UserNotFoundException {
@@ -39,7 +37,10 @@ public class TripService {
                 .id(UUID.randomUUID())
                 .name(tripRequest.name())
                 .startTime("startTime")
-                .endTime("EndTime")
+                .endTime("endTime")
+                .tripType(tripRequest.tripType())
+                .tripStatus(TripStatus.OPEN)
+                .pointList(new ArrayList<>())
                 .build();
 
         var trips = Optional.ofNullable(user.getTrips()).orElseGet(ArrayList::new);
@@ -54,10 +55,12 @@ public class TripService {
         //String distance = String.valueOf(calculateDistance(trip)).substring(0, 4);
         String distance = "0.0";
 
-        return new TripResponse(savedTrip.getId(), savedTrip.getName(), distance, savedTrip.getPointList());
+        return new TripResponse(savedTrip.getId(), savedTrip.getName(), distance, savedTrip.getTripType(), savedTrip.getPointList());
     }
 
-    public TripResponse addPointToTrip(Trip trip, PointRequest pointRequest) {
+    public TripResponse addPointToTrip(UUID tripId, PointRequest pointRequest) {
+        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
+
         Point point = new Point(UUID.randomUUID(), pointRequest.latitude(), pointRequest.longitude(), String.valueOf(LocalDateTime.now()), trip);
 
         var points = Optional.ofNullable(trip.getPointList()).orElseGet(ArrayList::new);
@@ -69,29 +72,33 @@ public class TripService {
 
         String distance = String.valueOf(calculateDistance(trip)).substring(0, 4);
 
-        return new TripResponse(trip.getId(), trip.getName(), distance, points);
+        return new TripResponse(trip.getId(), trip.getName(), distance, trip.getTripType(), points);
     }
 
     public List<TripResponse> getUserTrips(Jwt jwt) throws UserNotFoundException {
-        User user = userRepository.findById(jwt.getClaim(JwtClaimNames.SUB)).orElseThrow(() -> new UserNotFoundException("User does not exists"));
+        User user = userRepository.findById(UUID.fromString(jwt.getClaim(JwtClaimNames.SUB))).orElseThrow(() -> new UserNotFoundException("User does not exists"));
         return mapToTripResponseList(user.getTrips());
     }
 
     private List<TripResponse> mapToTripResponseList(List<Trip> tripList) {
         return tripList
                 .stream()
-                .map(trip -> new TripResponse(
-                        trip.getId(),
-                        trip.getName(),
-                        String.valueOf(calculateDistance(trip)).substring(0, 4),
-                        trip.getPointList()
-                ))
+                .map(this::mapToTripResponse
+                )
                 .toList();
+    }
+    private TripResponse mapToTripResponse(Trip trip) {
+        return new TripResponse(
+                trip.getId(),
+                trip.getName(),
+                null,
+                trip.getTripType(),
+                trip.getPointList().isEmpty() ? new ArrayList<>() : trip.getPointList());
     }
 
     //TODO to refactor
-    public TripResponse addManyPointToTrip(Trip trip) {
-
+    public TripResponse addManyPointToTrip(UUID tripId) {
+        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
         var points = List.of(
                 new Point(UUID.randomUUID(), 50.094444, 21.483333, "TIME", trip),
                 new Point(UUID.randomUUID(), 50.093611, 21.479444, "TIME", trip),
@@ -124,7 +131,7 @@ public class TripService {
 
         String distance = String.valueOf(calculateDistance(trip)).substring(0, 4);
 
-        return new TripResponse(trip.getId(), trip.getName(), distance, trip.getPointList());
+        return new TripResponse(trip.getId(), trip.getName(), distance, trip.getTripType(), trip.getPointList());
     }
 
     private double calculateDistance(Trip trip) {

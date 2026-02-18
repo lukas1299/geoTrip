@@ -23,6 +23,8 @@ public class Trip {
     private String name;
     private String startTime;
     private String endTime;
+    private TripType tripType;
+    private TripStatus tripStatus;
 
     @DBRef
     private User user;

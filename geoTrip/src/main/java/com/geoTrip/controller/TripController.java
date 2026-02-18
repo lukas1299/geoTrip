@@ -3,6 +3,7 @@ package com.geoTrip.controller;
 import com.geoTrip.model.*;
 import com.geoTrip.exception.UserNotFoundException;
 import com.geoTrip.service.TripService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
@@ -34,29 +36,22 @@ public class TripController {
         return ResponseEntity.ok(tripService.createTrip(jwt, tripRequest));
     }
 
-//    @PutMapping("/{tripId}/points")
-//    public ResponseEntity<TripResponse> addPointToTrip(@PathVariable UUID tripId, @RequestBody PointRequest pointRequest) {
-//
-//        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
-//        var tripResponse = tripService.addPointToTrip(trip, pointRequest);
-//
-//        return ResponseEntity.ok(tripResponse);
-//    }
-//
-//    @PostMapping("/{tripId}/add-points")
-//    public ResponseEntity<TripResponse> addPointsToTrip(@PathVariable UUID tripId){
-//        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
-//        var tripResponse = tripService.addManyPointToTrip(trip);
-//
-//        return ResponseEntity.ok(tripResponse);
-//    }
-//
-//    @DeleteMapping("/{tripId}")
-//    public void deleteTrip(@PathVariable UUID tripId) {
-//
-//        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
-//        tripService.deleteTrip(trip);
-//    }
+    @DeleteMapping("/{tripId}")
+    @PreAuthorize("hasRole('role_user')")
+    public ResponseEntity<TripResponse> deleteTrip(@PathVariable UUID tripId) {
 
+        return ResponseEntity.ok(tripService.deleteTrip(tripId));
+    }
 
+    @PutMapping("/{tripId}/points")
+    @PreAuthorize("hasRole('role_user')")
+    public ResponseEntity<TripResponse> addPointToTrip(@PathVariable UUID tripId, @RequestBody PointRequest pointRequest) {
+        return ResponseEntity.ok(tripService.addPointToTrip(tripId, pointRequest));
+    }
+
+    //FIXME EXPERIMENTAL ENDPOINT
+    @PostMapping("/{tripId}/add-points")
+    public ResponseEntity<TripResponse> addPointsToTrip(@PathVariable UUID tripId){
+        return ResponseEntity.ok(tripService.addManyPointToTrip(tripId));
+    }
 }
