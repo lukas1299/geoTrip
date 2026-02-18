@@ -1,11 +1,12 @@
 package com.geoTrip.service;
 
+import com.geoTrip.exception.UserNotFoundException;
 import com.geoTrip.model.User;
-import com.geoTrip.model.UserRequest;
-import com.geoTrip.exception.UserAlreadyExistsException;
+import com.geoTrip.model.UserResponse;
 import com.geoTrip.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -15,23 +16,14 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public User createUser(UserRequest userRequest) throws Exception {
-
-        if(userRepository.findByUsernameOrEmail(userRequest.username(), userRequest.email()).isPresent()){
-            throw new UserAlreadyExistsException("User currently exist");
-        }
-
-        User user = User.builder()
-                .id(UUID.randomUUID())
-                .username(userRequest.username())
-                .email(userRequest.email())
-                .password(passwordEncoder.encode(userRequest.password()))
-                .role(userRequest.role())
-                .build();
-
-        return userRepository.save(user);
+    public UserResponse getUser(Jwt jwt){
+        return userMapper(userRepository.findById(UUID.fromString(jwt.getClaim(JwtClaimNames.SUB))).orElseThrow());
     }
 
+    private static UserResponse userMapper(User user){
+        return new UserResponse(
+                user.getUsername(),
+                user.getEmail());
+    }
 }
