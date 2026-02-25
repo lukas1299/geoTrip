@@ -1,16 +1,18 @@
 package com.geoTrip.controller;
 
+import com.geoTrip.config.XMLParser;
 import com.geoTrip.model.*;
 import com.geoTrip.exception.UserNotFoundException;
 import com.geoTrip.service.TripService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -49,9 +51,21 @@ public class TripController {
         return ResponseEntity.ok(tripService.addPointToTrip(tripId, pointRequest));
     }
 
+    @PostMapping(path = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('role_user')")
+    public ResponseEntity<TripResponse> importTrip(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("tripType") TripType tripType
+    ) throws Exception {
+
+
+        return ResponseEntity.ok(tripService.importTrip(jwt, file, tripType));
+    }
+
     //FIXME EXPERIMENTAL ENDPOINT
     @PostMapping("/{tripId}/add-points")
-    public ResponseEntity<TripResponse> addPointsToTrip(@PathVariable UUID tripId){
+    public ResponseEntity<TripResponse> addPointsToTrip(@PathVariable UUID tripId) {
         return ResponseEntity.ok(tripService.addManyPointToTrip(tripId));
     }
 }
