@@ -1,6 +1,5 @@
 package com.geoTrip.model;
 
-import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;

@@ -1,4 +1,6 @@
 package com.geoTrip.model;
 
-public record PointRequest(double latitude, double longitude) {
+import java.time.LocalDateTime;
+
+public record PointRequest(double latitude, double longitude, LocalDateTime time) {
 }

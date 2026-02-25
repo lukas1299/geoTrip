@@ -1,11 +1,9 @@
 package com.geoTrip.config;
 
-import com.geoTrip.exception.UserNotFoundException;
 import com.geoTrip.model.User;
 import com.geoTrip.repository.UserRepository;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
