@@ -9,8 +9,6 @@ import com.geoTrip.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.convert.PeriodFormat;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.stereotype.Service;
@@ -193,7 +191,6 @@ public class TripService {
 //                new Point(UUID.randomUUID(), 50.093889, 21.484444, LocalDateTime.parse("2026-02-24T10:38:27.616635"), trip),
 //                new Point(UUID.randomUUID(), 50.094444, 21.483889, LocalDateTime.parse("2026-02-24T10:38:27.616635"), trip),
 //                new Point(UUID.randomUUID(), 50.094722, 21.483611, LocalDateTime.parse("2026-02-24T10:38:27.616635"), trip));
-
 
         points.forEach(p -> addPointToTrip(tripId, new PointRequest(p.getLatitude(), p.getLongitude(), p.getTime())));
 
