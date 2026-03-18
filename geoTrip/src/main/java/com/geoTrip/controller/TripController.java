@@ -63,6 +63,12 @@ public class TripController {
         return ResponseEntity.ok(tripService.importTrip(jwt, file, tripType));
     }
 
+    @PostMapping("/loadExampleTrip")
+    @PreAuthorize("hasRole('role_user')")
+    public ResponseEntity<List<List<Double>>> loadExampleTrip(@RequestBody SelectedPoints selectedPoints) {
+        return ResponseEntity.ok(tripService.generateExampleTrip(selectedPoints));
+    }
+
     //FIXME EXPERIMENTAL ENDPOINT
     @PostMapping("/{tripId}/add-points")
     public ResponseEntity<TripResponse> addPointsToTrip(@PathVariable UUID tripId) {
