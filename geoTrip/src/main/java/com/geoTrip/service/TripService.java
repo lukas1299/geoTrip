@@ -9,9 +9,12 @@ import com.geoTrip.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
@@ -27,6 +30,7 @@ public class TripService {
     private final UserRepository userRepository;
     private final PointRepository pointRepository;
     private final XMLParser xmlParser;
+
 
     private static final double EARTH_RADIUS = 6371;
 
@@ -138,6 +142,35 @@ public class TripService {
         pointRepository.saveAll(points);
 
         return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), savedTrip.getTotalTime(), savedTrip.getPointList());
+    }
+
+    public List<List<Double>> generateExampleTrip(SelectedPoints selectedPoints) {
+        RestClient restClient = RestClient.create();
+        GraphhopperRequest graphhopperRequest = new GraphhopperRequest(List.of(selectedPoints.getPoints().get(1)),"round_trip", List.of(10000, new Random().nextInt(1 , 5)), List.of("motorway", "ferry", "tunnel"), List.of("road_class", "surface"), "foot", "en", true, true, false);
+        ResponseEntity<GraphhopperResponse> res = restClient.post()
+                .uri("https://graphhopper.com/api/1/route?key=04490a6e-398d-4ad3-bf09-62947ccdf061")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(graphhopperRequest)
+                .retrieve()
+                .toEntity(GraphhopperResponse.class);
+
+        if (res.getBody() != null) {
+            return getPoints(res);
+        }
+        
+        return new ArrayList<>();
+    }
+
+    private static List<List<Double>> getPoints(ResponseEntity<GraphhopperResponse> res) {
+
+        return res.getBody()
+                .getPaths()
+                .get(0)
+                .getPoints()
+                .getCoordinates()
+                .stream()
+                .map(p -> List.of(p.get(1), p.get(0)))
+                .toList();
     }
 
     public List<TripResponse> getUserTrips(Jwt jwt) throws UserNotFoundException {
