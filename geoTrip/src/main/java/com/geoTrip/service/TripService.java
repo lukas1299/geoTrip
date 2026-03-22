@@ -144,9 +144,56 @@ public class TripService {
         return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), savedTrip.getTotalTime(), savedTrip.getPointList());
     }
 
-    public List<List<Double>> generateExampleTrip(SelectedPoints selectedPoints) {
+    public List<List<Double>> generateTripBetweenPoints(SelectedPoints selectedPoints) {
+
         RestClient restClient = RestClient.create();
-        GraphhopperRequest graphhopperRequest = new GraphhopperRequest(List.of(selectedPoints.getPoints().get(1)),"round_trip", List.of(10000, new Random().nextInt(1 , 5)), List.of("motorway", "ferry", "tunnel"), List.of("road_class", "surface"), "foot", "en", true, true, false);
+        GraphhopperRequest graphhopperRequest = new GraphhopperRequest(List.of(
+                selectedPoints.getPoints().get(0),
+                selectedPoints.getPoints().get(1)),
+                null,
+                null,
+                List.of("motorway", "ferry", "tunnel"),
+                List.of("road_class", "surface"),
+                "foot",
+                "en",
+                true,
+                true,
+                false);
+        ResponseEntity<GraphhopperResponse> res = restClient.post()
+                .uri("https://graphhopper.com/api/1/route?key=04490a6e-398d-4ad3-bf09-62947ccdf061")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(graphhopperRequest)
+                .retrieve()
+                .toEntity(GraphhopperResponse.class);
+
+        if (res.getBody() != null) {
+            return getPoints(res);
+        }
+
+        return new ArrayList<>();
+    }
+
+    public List<List<Double>> generateExampleTrip(SelectedPoints selectedPoints) {
+        int distance = switch (selectedPoints.getRange()) {
+            case 2  -> 7500;
+            case 3  -> 15000;
+            default -> 3000;
+        };
+
+        RestClient restClient = RestClient.create();
+        GraphhopperRequest graphhopperRequest = new GraphhopperRequest(List.of(
+                selectedPoints.getPoints().get(0),
+                randomPoint(selectedPoints.getPoints().get(0), distance),
+                selectedPoints.getPoints().get(0)),
+                null,
+                null,
+                List.of("motorway", "ferry", "tunnel"),
+                List.of("road_class", "surface"),
+                "foot",
+                "en",
+                true,
+                true,
+                false);
         ResponseEntity<GraphhopperResponse> res = restClient.post()
                 .uri("https://graphhopper.com/api/1/route?key=04490a6e-398d-4ad3-bf09-62947ccdf061")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -159,6 +206,24 @@ public class TripService {
         }
         
         return new ArrayList<>();
+    }
+
+    private List<Double> randomPoint(List<Double> start, double radiusMeters) {
+        double lng = start.get(0);
+        double lat = start.get(1);
+
+        double radius = radiusMeters / 111300.0;
+
+        double u = Math.random();
+        double v = Math.random();
+
+        double w = radius * Math.sqrt(u);
+        double t = 2 * Math.PI * v;
+
+        double newLng = lng + w * Math.cos(t);
+        double newLat = lat + w * Math.sin(t);
+
+        return List.of(newLng, newLat);
     }
 
     private static List<List<Double>> getPoints(ResponseEntity<GraphhopperResponse> res) {

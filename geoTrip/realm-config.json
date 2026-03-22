@@ -1,0 +1,53 @@
+{
+  "realm": "realm_geo",
+  "enabled": true,
+  "users": [
+    {
+      "username": "user2",
+      "firstName": "user2",
+      "lastName": "user2",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user2"
+        }
+      ],
+      "realmRoles": ["role_admin"]
+    },
+    {
+      "username": "user1",
+      "firstName": "user1",
+      "lastName": "user1",
+      "email": "user1@gmail.com",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user1"
+        }
+      ],
+      "realmRoles": ["role_user"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "role_admin"
+      },
+      {
+        "name": "role_user"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "geo",
+      "publicClient": true,
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true
+    }
+  ]
+}

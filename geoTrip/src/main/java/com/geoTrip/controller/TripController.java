@@ -69,6 +69,20 @@ public class TripController {
         return ResponseEntity.ok(tripService.generateExampleTrip(selectedPoints));
     }
 
+    @PostMapping("/calculate-between-points")
+    @PreAuthorize("hasRole('role_user')")
+    public ResponseEntity<List<List<Double>>> calculateRouteBetweenPoints(@RequestBody SelectedPoints selectedPoints) {
+        return ResponseEntity.ok(tripService.generateTripBetweenPoints(selectedPoints));
+    }
+
+//    @PostMapping("/extend-from-last-point")
+//    @PreAuthorize("hasRole('role_user')")
+//    public ResponseEntity<List<List<Double>>> extendRouteFromLastPoint(@RequestBody SelectedPoints selectedPoints) {
+//        return ResponseEntity.ok(tripService.generateTripBetweenPoints(selectedPoints));
+//    }
+
+
+
     //FIXME EXPERIMENTAL ENDPOINT
     @PostMapping("/{tripId}/add-points")
     public ResponseEntity<TripResponse> addPointsToTrip(@PathVariable UUID tripId) {
