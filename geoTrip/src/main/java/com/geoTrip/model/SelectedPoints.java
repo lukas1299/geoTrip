@@ -9,4 +9,5 @@ import java.util.List;
 @Setter
 public class SelectedPoints {
     List<List<Double>> points;
+    int range;
 }
