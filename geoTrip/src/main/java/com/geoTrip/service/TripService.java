@@ -14,9 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -56,6 +58,7 @@ public class TripService {
                 .totalTime(null)
                 .calorie(tripRequest.calorie())
                 .strength(tripRequest.strength())
+                .isFavorite(false)
                 .pointList(tripRequest.points().isEmpty() ? new ArrayList<>() : tripRequest.points())
                 .distance(tripRequest.points().isEmpty() ? 0.0 : calculateDistance(tripRequest.points().stream().sorted(Comparator.comparing(Point::getTime)).toList()))
                 .build();
@@ -69,7 +72,7 @@ public class TripService {
         userRepository.save(user);
         var savedTrip = tripRepository.save(trip);
 
-        return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), savedTrip.getTotalTime(), savedTrip.getPointList());
+        return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), trip.getPulse(), trip.getCalorie(), trip.getRate(), trip.getStrength(),  savedTrip.getTotalTime(), trip.getIsFavorite(), savedTrip.getPointList());
     }
 
     public TripResponse addPointToTrip(UUID tripId, PointRequest pointRequest) {
@@ -108,7 +111,7 @@ public class TripService {
         pointRepository.save(point);
         tripRepository.save(trip);
 
-        return new TripResponse(trip.getId(), trip.getName(), trip.getDistance(), trip.getTripType(), trip.getTotalTime(), points);
+        return new TripResponse(trip.getId(), trip.getName(), trip.getDistance(), trip.getTripType(), trip.getPulse(), trip.getCalorie(), trip.getRate(), trip.getStrength(),  trip.getTotalTime(), trip.getIsFavorite(), points);
     }
 
     public TripResponse importTrip(Jwt jwt, MultipartFile file, TripType tripType) throws Exception {
@@ -122,11 +125,12 @@ public class TripService {
                 .endTime(null)
                 .tripType(tripType)
                 .tripStatus(TripStatus.OPEN)
-                .pulse(0)
-                .rate(null)
+                .pulse(140)
+                .rate("0'0''/km")
                 .totalTime(String.valueOf(Duration.between(points.get(0).getTime(), points.get(points.size() - 1).getTime()).toMillis()))
-                .calorie(0)
-                .strength(0)
+                .calorie(512)
+                .strength(160)
+                .isFavorite(false)
                 .pointList(points)
                 .distance(points.isEmpty() ? 0.0 : calculateDistance(points.stream().sorted(Comparator.comparing(Point::getTime)).toList()))
                 .build();
@@ -141,7 +145,7 @@ public class TripService {
 
         pointRepository.saveAll(points);
 
-        return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), savedTrip.getTotalTime(), savedTrip.getPointList());
+        return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), trip.getPulse(), trip.getCalorie(), trip.getRate(), trip.getStrength(), savedTrip.getTotalTime(), trip.getIsFavorite(), savedTrip.getPointList());
     }
 
     public List<List<Double>> generateTripBetweenPoints(SelectedPoints selectedPoints) {
@@ -257,9 +261,82 @@ public class TripService {
                 trip.getName(),
                 trip.getDistance(),
                 trip.getTripType(),
+                trip.getPulse(),
+                trip.getCalorie(),
+                trip.getRate(),
+                trip.getStrength(),
                 trip.getTotalTime(),
+                trip.getIsFavorite(),
                 trip.getPointList().isEmpty() ? new ArrayList<>() : trip.getPointList());
     }
+
+    public TripResponse editTrip(UUID tripId, TripRequest tripRequest) {
+
+        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
+
+        trip.setName(tripRequest.name());
+        trip.setDistance(tripRequest.distance());
+        trip.setTripType(tripRequest.tripType());
+        trip.setPulse(tripRequest.pulse());
+        trip.setCalorie(tripRequest.calorie());
+        trip.setRate(tripRequest.rate());
+        trip.setStrength(tripRequest.strength());
+        trip.setTotalTime(tripRequest.totalTime());
+
+        Trip newTrip = tripRepository.save(trip);
+
+        return mapToTripResponse(newTrip);
+    }
+
+    public TripResponse updateTrip(UUID tripId, Map<String, Object> updates) {
+
+        Trip trip = tripRepository.findById(tripId).orElseThrow(() -> new EntityNotFoundException("The tour does not exist."));
+
+        updates.forEach((key, value) -> {
+            Field field = ReflectionUtils.findField(Trip.class, key);
+            if (field != null) {
+                field.setAccessible(true);
+                ReflectionUtils.setField(field, trip, value);
+            }
+        });
+
+        return mapToTripResponse(tripRepository.save(trip));
+    }
+    public TripResponse createCustomTrip(Jwt jwt, List<Double[]> coordinates) throws UserNotFoundException {
+        User user = userRepository.findById(UUID.fromString(jwt.getClaim(JwtClaimNames.SUB))).orElseThrow(() -> new UserNotFoundException("User does not exists"));
+
+        List<Point> points = coordinates.stream().map(c -> new Point(UUID.randomUUID(), c[0], c[1], null, null)).toList();
+
+        Trip trip = Trip.builder()
+                .id(UUID.randomUUID())
+                .name("---")
+                .startTime(null)
+                .endTime(null)
+                .tripType(TripType.OTHER)
+                .tripStatus(TripStatus.OPEN)
+                .pulse(0)
+                .rate("0'0''/km")
+                .totalTime("0:00:00")
+                .calorie(0)
+                .strength(0)
+                .isFavorite(false)
+                .pointList(points)
+                .distance(0.0)
+                .build();
+
+        var trips = Optional.ofNullable(user.getTrips()).orElseGet(ArrayList::new);
+
+        trips.add(trip);
+        user.setTrips(trips);
+        trip.setUser(user);
+        userRepository.save(user);
+        var savedTrip = tripRepository.save(trip);
+
+        pointRepository.saveAll(points);
+
+        return new TripResponse(savedTrip.getId(), savedTrip.getName(), savedTrip.getDistance(), savedTrip.getTripType(), trip.getPulse(), trip.getCalorie(), trip.getRate(), trip.getStrength(), savedTrip.getTotalTime(), trip.getIsFavorite(), savedTrip.getPointList());
+    }
+
 
     //TODO to refactor
     public TripResponse addManyPointToTrip(UUID tripId) {
@@ -292,7 +369,7 @@ public class TripService {
 
         points.forEach(p -> addPointToTrip(tripId, new PointRequest(p.getLatitude(), p.getLongitude(), p.getTime())));
 
-        return new TripResponse(trip.getId(), trip.getName(), trip.getDistance(), trip.getTripType(), trip.getTotalTime(), trip.getPointList());
+        return new TripResponse(trip.getId(), trip.getName(), trip.getDistance(), trip.getTripType(), trip.getPulse() , trip.getCalorie(), trip.getRate(), trip.getStrength(), trip.getTotalTime(), trip.getIsFavorite(), trip.getPointList());
     }
 
     private double calculateDistance(List<Point> points) {
@@ -325,6 +402,7 @@ public class TripService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS * c;
     }
+
 
 
 }

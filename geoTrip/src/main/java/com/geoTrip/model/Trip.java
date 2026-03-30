@@ -34,6 +34,7 @@ public class Trip {
     private Integer pulse;
     private Integer calorie;
     private String rate;
+    private Boolean isFavorite;
     private Integer strength;
 
     @DBRef
