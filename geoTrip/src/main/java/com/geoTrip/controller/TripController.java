@@ -3,6 +3,7 @@ package com.geoTrip.controller;
 import com.geoTrip.config.XMLParser;
 import com.geoTrip.model.*;
 import com.geoTrip.exception.UserNotFoundException;
+import com.geoTrip.repository.TripRepository;
 import com.geoTrip.service.TripService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +15,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -25,6 +28,7 @@ import java.util.UUID;
 public class TripController {
 
     private final TripService tripService;
+    private final TripRepository tripRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('role_user')")
@@ -38,11 +42,24 @@ public class TripController {
         return ResponseEntity.ok(tripService.createTrip(jwt, tripRequest));
     }
 
+    @PostMapping("/custom")
+    @PreAuthorize("hasRole('role_user')")
+    public ResponseEntity<TripResponse> createCustomTrip(@AuthenticationPrincipal Jwt jwt, @RequestBody List<Double[]> coordinates) throws UserNotFoundException {
+        return ResponseEntity.ok(tripService.createCustomTrip(jwt, coordinates));
+    }
+
+
     @DeleteMapping("/{tripId}")
     @PreAuthorize("hasRole('role_user')")
     public ResponseEntity<TripResponse> deleteTrip(@PathVariable UUID tripId) {
 
         return ResponseEntity.ok(tripService.deleteTrip(tripId));
+    }
+
+    @PatchMapping("/{tripId}")
+    public ResponseEntity<TripResponse> editTrip(@PathVariable UUID tripId, @RequestBody Map<String, Object> updates){
+        TripResponse trip = tripService.updateTrip(tripId, updates);
+        return ResponseEntity.ok(trip);
     }
 
     @PutMapping("/{tripId}/points")
@@ -80,8 +97,6 @@ public class TripController {
 //    public ResponseEntity<List<List<Double>>> extendRouteFromLastPoint(@RequestBody SelectedPoints selectedPoints) {
 //        return ResponseEntity.ok(tripService.generateTripBetweenPoints(selectedPoints));
 //    }
-
-
 
     //FIXME EXPERIMENTAL ENDPOINT
     @PostMapping("/{tripId}/add-points")
